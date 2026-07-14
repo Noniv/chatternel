@@ -1,0 +1,13 @@
+{
+  "name": "Chatternel",
+  "short_name": "Chatternel",
+  "description": "A fast, private, mobile-first frontend for OpenRouter.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b0c11",
+  "theme_color": "#0b0c11",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

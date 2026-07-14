@@ -1,0 +1,23 @@
+# build output
+dist
+
+# dependencies
+node_modules
+
+# local-only files (env overrides, tool settings)
+*.local
+.env
+.env.*
+
+# logs
+*.log
+npm-debug.log*
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# OS junk
+.DS_Store
+Thumbs.db
