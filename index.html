@@ -12,6 +12,13 @@
     <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Chatternel</title>
+    <!-- Painted before the stylesheet loads, so the first frame is not white. Matches --bg-0. -->
+    <style>
+      :root {
+        color-scheme: dark;
+        background-color: #0b0c11;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

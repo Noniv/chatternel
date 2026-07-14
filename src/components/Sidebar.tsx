@@ -1,5 +1,5 @@
 import { formatDate } from "../lib/format";
-import { appActions, useAppState } from "../state/appStore";
+import { appActions } from "../state/appStore";
 import { uiActions } from "../state/uiStore";
 import { PREVIEW_LENGTH, type Conversation } from "../types";
 import { IconGear, IconPlus, IconSpark, IconX } from "./Icons";
@@ -31,8 +31,13 @@ function ConvoItem({ convo, active }: { convo: Conversation; active: boolean }) 
   );
 }
 
-export function Sidebar() {
-  const { conversations, currentId } = useAppState();
+export function Sidebar({
+  conversations,
+  activeId,
+}: {
+  conversations: Conversation[];
+  activeId: string | null;
+}) {
   const sorted = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
@@ -69,7 +74,7 @@ export function Sidebar() {
       ) : (
         <ul className="convo-list">
           {sorted.map((convo) => (
-            <ConvoItem key={convo.id} convo={convo} active={convo.id === currentId} />
+            <ConvoItem key={convo.id} convo={convo} active={convo.id === activeId} />
           ))}
         </ul>
       )}

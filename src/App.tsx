@@ -1,5 +1,6 @@
-import { useAppState } from "./state/appStore";
+import type { CSSProperties } from "react";
 import { appActions } from "./state/appStore";
+import { PANE_SLIDE_MS, useNav } from "./state/nav";
 import { ChatView } from "./components/ChatView";
 import { Sidebar } from "./components/Sidebar";
 import { SettingsDialog } from "./components/SettingsDialog";
@@ -23,14 +24,16 @@ function EmptyPane() {
 }
 
 export default function App() {
-  const { conversations, currentId } = useAppState();
-  const convo = conversations.find((c) => c.id === currentId) ?? null;
+  const { chatOpen, paneConvo, listConvos, listActiveId } = useNav();
 
   return (
-    <div className={`app ${convo ? "chat-open" : ""}`}>
-      <Sidebar />
+    <div
+      className={`app ${chatOpen ? "chat-open" : ""}`}
+      style={{ "--pane-slide": `${PANE_SLIDE_MS}ms` } as CSSProperties}
+    >
+      <Sidebar conversations={listConvos} activeId={listActiveId} />
       <main className="chatpane">
-        {convo ? <ChatView key={convo.id} convo={convo} /> : <EmptyPane />}
+        {paneConvo ? <ChatView key={paneConvo.id} convo={paneConvo} /> : <EmptyPane />}
       </main>
       <SettingsDialog />
       <SummaryDialog />
