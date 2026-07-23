@@ -1,10 +1,12 @@
-import { memo, useLayoutEffect, useRef, useState } from "react";
+import { memo, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { regenerateFrom, resendUserEdit } from "../lib/engine";
-import { appActions } from "../state/appStore";
+import { stripHiddenBlocks } from "../lib/hiddenBlocks";
+import { appActions, useAppState } from "../state/appStore";
 import { toast } from "../state/toastStore";
 import type { StreamState } from "../state/streamStore";
 import type { Message } from "../types";
 import { CopyButton } from "./CopyButton";
+import { HiddenBlock } from "./HiddenBlock";
 import { IconChevronLeft, IconPencil, IconRedo } from "./Icons";
 import { Markdown } from "./Markdown";
 import { ReasoningBlock } from "./ReasoningBlock";
@@ -82,13 +84,22 @@ interface Props {
 
 export const MessageItem = memo(function MessageItem({ msg, index, convoId, live }: Props) {
   const [editing, setEditing] = useState(false);
+  const { hiddenBlocks } = useAppState().settings;
 
   const streaming = live !== null;
-  const content = streaming ? live.content : msg.content;
+  const rawContent = streaming ? live.content : msg.content;
   const reasoning = streaming ? live.reasoning : (msg.reasoning ?? "");
   const isUser = msg.role === "user";
   const alternatives = msg.alternatives;
   const activeIdx = msg.activeIdx ?? 0;
+
+  // Hidden-block stripping is display-only for assistant messages; the stored
+  // content and the history sent to the model keep the original markers.
+  const stripped = useMemo(
+    () => (isUser ? null : stripHiddenBlocks(rawContent, hiddenBlocks, { streaming })),
+    [isUser, rawContent, hiddenBlocks, streaming],
+  );
+  const content = stripped ? stripped.content : rawContent;
 
   const saveEdit = (text: string) => {
     setEditing(false);
@@ -130,7 +141,7 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
               </button>
             </span>
           )}
-          <CopyButton className="msg-act" getText={() => msg.content} label="Copy message">
+          <CopyButton className="msg-act" getText={() => content} label="Copy message">
             {null}
           </CopyButton>
           <button
@@ -172,6 +183,9 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
               reasoningDone={streaming ? live.reasoningDone : true}
             />
           )}
+          {stripped?.sections.map((section, i) => (
+            <HiddenBlock key={i} label={section.label} text={section.text} />
+          ))}
           <div className="msg-content">
             {streaming && !content ? <TypingDots /> : <Markdown text={content} />}
           </div>

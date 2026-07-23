@@ -24,6 +24,21 @@ export interface Conversation {
 
 export type ReasoningEffort = "" | "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
+/**
+ * A display-only rule for hiding a region of assistant output behind an
+ * expandable block (like reasoning). The matched text is never removed from the
+ * stored message or from the history sent to the model — only from what's shown.
+ */
+export interface HiddenBlockRule {
+  id: string;
+  label: string;
+  /** Literal text that begins the hidden region. */
+  start: string;
+  /** Literal text that ends it (inclusive). Blank = strip to end of the line. */
+  end: string;
+  enabled: boolean;
+}
+
 export interface Settings {
   apiKey: string;
   modelId: string;
@@ -35,6 +50,7 @@ export interface Settings {
   reasoningEffort: ReasoningEffort;
   reasoningTokens: string;
   reasoningCollapsedByDefault: boolean;
+  hiddenBlocks: HiddenBlockRule[];
 }
 
 export interface StoreData {
@@ -54,6 +70,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reasoningEffort: "",
   reasoningTokens: "",
   reasoningCollapsedByDefault: true,
+  hiddenBlocks: [],
 };
 
 export const MIN_REASONING_TOKENS = 1024;

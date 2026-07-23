@@ -31,6 +31,9 @@ Chatternel is the middle path: zero install, zero backend, genuinely good on a p
 - Set reasoning **effort** (auto / off / minimal → max) or an **exact token budget**.
 - Reasoning traces stream in above the reply, collapsible with one tap — including `<think>`-style traces from models that inline them.
 
+### 🫥 Hidden blocks
+Elaborate system prompts often make the model emit bookkeeping you don't want to *read* but do want the model to *keep* — status headers, tracking notes, scratch metadata, and the like. Define your own marker pairs in **Settings**, and any matched region folds away into a collapsible block, just like reasoning. It's display-only: the text stays in the message and is still sent to the model on the next turn — only your on-screen view is tidied.
+
 ### ⚡ Streaming that doesn't flinch
 Replies render live, but finished paragraphs and code blocks never re-flow or flicker mid-stream — even in very long conversations. Your question pins to the top of the view while the answer fills in below.
 

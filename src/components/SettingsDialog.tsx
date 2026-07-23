@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { exportStore, parseBackup } from "../lib/storage";
+import { exportStore, parseBackup, uuid } from "../lib/storage";
 import { appActions, getAppState, useAppState } from "../state/appStore";
 import { toast } from "../state/toastStore";
 import { uiActions, useUi } from "../state/uiStore";
-import { DEFAULT_SETTINGS, MIN_REASONING_TOKENS, type ReasoningEffort, type Settings } from "../types";
-import { IconExport, IconEye, IconEyeOff, IconImport, IconSpark } from "./Icons";
+import {
+  DEFAULT_SETTINGS,
+  MIN_REASONING_TOKENS,
+  type HiddenBlockRule,
+  type ReasoningEffort,
+  type Settings,
+} from "../types";
+import { IconExport, IconEye, IconEyeOff, IconImport, IconPlus, IconSpark, IconX } from "./Icons";
 import { Modal } from "./Modal";
 
 const EFFORT_OPTIONS: { value: ReasoningEffort; label: string }[] = [
@@ -73,6 +79,87 @@ function SliderField({
         <span className="slider-val">{value.toFixed(2)}</span>
       </div>
       <span className="field-hint">{hint}</span>
+    </div>
+  );
+}
+
+function HiddenBlocksEditor({
+  rules,
+  onChange,
+}: {
+  rules: HiddenBlockRule[];
+  onChange: (rules: HiddenBlockRule[]) => void;
+}) {
+  const update = (id: string, patch: Partial<HiddenBlockRule>) =>
+    onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
+  const add = () =>
+    onChange([...rules, { id: uuid(), label: "", start: "", end: "", enabled: true }]);
+
+  return (
+    <div className="field">
+      <span className="field-label">
+        Hidden blocks <span className="optional">(optional)</span>
+      </span>
+      <span className="field-hint">
+        Fold parts of the reply into an expandable block, like reasoning. Matched text stays in the
+        message and is still sent to the model — only the on-screen view is hidden. Leave “End” blank
+        to hide to the end of the line.
+      </span>
+
+      {rules.map((rule) => (
+        <div key={rule.id} className="hb-rule">
+          <div className="hb-rule-top">
+            <input
+              type="text"
+              className="field-input"
+              placeholder="Label (e.g. Notes)"
+              value={rule.label}
+              onChange={(e) => update(rule.id, { label: e.target.value })}
+            />
+            <Toggle
+              label=""
+              checked={rule.enabled}
+              onChange={(v) => update(rule.id, { enabled: v })}
+            />
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Remove hidden block"
+              onClick={() => onChange(rules.filter((r) => r.id !== rule.id))}
+            >
+              <IconX size={16} />
+            </button>
+          </div>
+          <div className="hb-rule-markers">
+            <input
+              type="text"
+              className="field-input"
+              placeholder="Start marker  <!-- META -->"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={rule.start}
+              onChange={(e) => update(rule.id, { start: e.target.value })}
+            />
+            <input
+              type="text"
+              className="field-input"
+              placeholder="End marker  <!-- END_META -->"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={rule.end}
+              onChange={(e) => update(rule.id, { end: e.target.value })}
+            />
+          </div>
+        </div>
+      ))}
+
+      <button type="button" className="btn btn-ghost btn-sm" onClick={add}>
+        <IconPlus size={14} />
+        Add hidden block
+      </button>
     </div>
   );
 }
@@ -298,6 +385,10 @@ export function SettingsDialog() {
           />
           <span className="field-hint">Sets whether new replies' reasoning starts expanded.</span>
         </div>
+
+        <hr className="divider" />
+
+        <HiddenBlocksEditor rules={form.hiddenBlocks} onChange={(hiddenBlocks) => patch({ hiddenBlocks })} />
 
         <hr className="divider" />
 

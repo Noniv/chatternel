@@ -724,6 +724,50 @@
   }
 }
 
+/* hidden blocks */
+
+.reasoning.hidden-block {
+  background: rgba(140, 200, 255, 0.045);
+  border-left-color: rgba(120, 180, 255, 0.55);
+}
+
+.hidden-block-body {
+  font-style: normal;
+  white-space: pre-wrap;
+}
+
+.hb-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-0);
+  border-radius: var(--r-md);
+}
+
+.hb-rule-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hb-rule-top .field-input {
+  flex: 1;
+}
+
+.hb-rule-top .toggle-row {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.hb-rule-markers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* editing */
 
 .msg-edit {
