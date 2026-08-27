@@ -186,9 +186,20 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
           {stripped?.sections.map((section, i) => (
             <HiddenBlock key={i} label={section.label} text={section.text} />
           ))}
-          <div className="msg-content">
-            {streaming && !content ? <TypingDots /> : <Markdown text={content} />}
-          </div>
+          {msg.images && msg.images.length > 0 && (
+            <div className="msg-images">
+              {msg.images.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noreferrer" aria-label={`Open image ${i + 1}`}>
+                  <img src={url} alt={`Attached image ${i + 1}`} loading="lazy" />
+                </a>
+              ))}
+            </div>
+          )}
+          {(content || !msg.images?.length) && (
+            <div className="msg-content">
+              {streaming && !content ? <TypingDots /> : <Markdown text={content} />}
+            </div>
+          )}
         </>
       )}
     </article>

@@ -8,6 +8,8 @@ export interface Alternative {
 export interface Message {
   role: Role;
   content: string;
+  /** Image attachments as base64 data URLs, sent as `image_url` content parts. */
+  images?: string[];
   reasoning?: string;
   alternatives?: Alternative[];
   activeIdx?: number;

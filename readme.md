@@ -31,6 +31,14 @@ Chatternel is the middle path: zero install, zero backend, genuinely good on a p
 - Set reasoning **effort** (auto / off / minimal → max) or an **exact token budget**.
 - Reasoning traces stream in above the reply, collapsible with one tap — including `<think>`-style traces from models that inline them.
 
+### 🖼️ Show it, don't describe it
+Tap the **+** next to the send button to attach a picture — a screenshot, a photo, a diagram, a page of handwriting — and ask about it in the same message.
+
+- **Attach however you like** — pick files with **+**, paste straight from your clipboard, or drag them onto the composer.
+- **Several at once** — send up to 8 images per message; they show as thumbnails you can remove before sending, and stay with the message afterwards.
+- **Kept light** — big pictures are resized in your browser before they're sent, so requests stay quick and your saved chats stay small.
+- PNG, JPEG, WebP and GIF, sent to OpenRouter exactly the way its API expects. Just make sure the model you've picked can actually see — a text-only model will simply reject the request.
+
 ### 🫥 Hidden blocks
 Elaborate system prompts often make the model emit bookkeeping you don't want to *read* but do want the model to *keep* — status headers, tracking notes, scratch metadata, and the like. Define your own marker pairs in **Settings**, and any matched region folds away into a collapsible block, just like reasoning. It's display-only: the text stays in the message and is still sent to the model on the next turn — only your on-screen view is tidied.
 

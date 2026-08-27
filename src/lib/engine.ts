@@ -10,7 +10,7 @@ export function stopStream(): void {
   controller?.abort();
 }
 
-export function sendMessage(text: string): boolean {
+export function sendMessage(text: string, images: string[] = []): boolean {
   if (streamStore.get().active) {
     stopStream();
     return false;
@@ -23,8 +23,10 @@ export function sendMessage(text: string): boolean {
   const convo = getCurrentConvo();
   if (!convo) return false;
 
-  const content = text.trim() || "Continue.";
-  appActions.appendUserMessage(convo.id, content);
+  const trimmed = text.trim();
+  // An empty message with no images is the "continue the reply" shortcut.
+  const content = trimmed || (images.length ? "" : "Continue.");
+  appActions.appendUserMessage(convo.id, content, images);
   void generate(null);
   return true;
 }

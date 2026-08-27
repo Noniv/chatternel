@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, MIN_REASONING_TOKENS, type Conversation, type Settings } from "../types";
+import { DEFAULT_SETTINGS, MIN_REASONING_TOKENS, type Conversation, type Message, type Settings } from "../types";
 
 export const API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -11,8 +11,25 @@ function headers(apiKey: string): HeadersInit {
   };
 }
 
+type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
+/**
+ * Messages without images stay plain strings. With images we switch to the
+ * multimodal content array OpenRouter documents: the text part first, then one
+ * `image_url` part per image.
+ */
+function messageContent(msg: Message): string | ContentPart[] {
+  if (!msg.images || msg.images.length === 0) return msg.content;
+  const parts: ContentPart[] = [];
+  if (msg.content) parts.push({ type: "text", text: msg.content });
+  for (const url of msg.images) parts.push({ type: "image_url", image_url: { url } });
+  return parts;
+}
+
 export function buildRequestBody(settings: Settings, convo: Conversation, endIdx: number): Record<string, unknown> {
-  const history = convo.messages.slice(0, endIdx).map(({ role, content }) => ({ role, content }));
+  const history = convo.messages
+    .slice(0, endIdx)
+    .map((msg) => ({ role: msg.role, content: messageContent(msg) }));
 
   let systemContent = settings.systemPrompt || "";
   if (convo.summary) {

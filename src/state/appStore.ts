@@ -89,16 +89,19 @@ export const appActions = {
     updateConvo(convoId, (c) => ({ ...c, title: title.trim() || "New Chat" }));
   },
 
-  appendUserMessage(convoId: string, content: string): void {
+  appendUserMessage(convoId: string, content: string, images?: string[]): void {
     updateConvo(convoId, (c) => {
+      const label = content || (images?.length ? "Image" : "");
       const title =
         c.messages.length === 0
-          ? content.slice(0, TITLE_LENGTH) + (content.length > TITLE_LENGTH ? "…" : "")
+          ? label.slice(0, TITLE_LENGTH) + (label.length > TITLE_LENGTH ? "…" : "")
           : c.title;
+      const msg: Message = { role: "user", content };
+      if (images?.length) msg.images = images;
       return {
         ...c,
         title,
-        messages: [...c.messages, { role: "user", content }],
+        messages: [...c.messages, msg],
         updatedAt: Date.now(),
       };
     });
