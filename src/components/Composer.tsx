@@ -1,15 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { sendMessage, stopStream } from "../lib/engine";
-import {
-  IMAGE_ACCEPT,
-  MAX_IMAGES_PER_MESSAGE,
-  fileToAttachment,
-  imageFilesFrom,
-  type Attachment,
-} from "../lib/images";
+import { imageFilesFrom } from "../lib/images";
 import { useStreamActive } from "../state/streamStore";
-import { toast } from "../state/toastStore";
-import { IconArrowUp, IconPlay, IconPlus, IconStop, IconX } from "./Icons";
+import { AttachmentStrip, useAttachments } from "./attachments";
+import { IconArrowUp, IconPlay, IconPlus, IconStop } from "./Icons";
 
 const MAX_INPUT_HEIGHT = 160;
 
@@ -19,21 +13,17 @@ function hasFinePointer() {
 
 export function Composer({ convoId }: { convoId: string }) {
   const [text, setText] = useState("");
-  const [images, setImages] = useState<Attachment[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [loadingImages, setLoadingImages] = useState(false);
+  const attachments = useAttachments();
   const active = useStreamActive();
   const ref = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
+  const { clear } = attachments;
   useEffect(() => {
+    clear();
     const timer = window.setTimeout(() => ref.current?.focus(), 250);
     return () => window.clearTimeout(timer);
-  }, [convoId]);
-
-  useEffect(() => {
-    setImages([]);
-  }, [convoId]);
+  }, [convoId, clear]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -42,39 +32,17 @@ export function Composer({ convoId }: { convoId: string }) {
     el.style.height = Math.min(el.scrollHeight, MAX_INPUT_HEIGHT) + "px";
   }, [text]);
 
-  const addFiles = async (files: File[]) => {
-    if (files.length === 0) return;
-    const room = MAX_IMAGES_PER_MESSAGE - images.length;
-    if (room <= 0) {
-      toast(`Up to ${MAX_IMAGES_PER_MESSAGE} images per message.`);
-      return;
-    }
-    if (files.length > room) toast(`Only the first ${room} image(s) were added.`);
-
-    setLoadingImages(true);
-    for (const file of files.slice(0, room)) {
-      try {
-        const attachment = await fileToAttachment(file);
-        setImages((prev) => [...prev, attachment]);
-      } catch (err) {
-        toast((err as Error).message);
-      }
-    }
-    setLoadingImages(false);
-    ref.current?.focus();
-  };
-
-  const mode = active ? "stop" : text.trim() || images.length ? "send" : "continue";
+  const mode = active ? "stop" : text.trim() || attachments.images.length ? "send" : "continue";
 
   const submit = () => {
     if (active) {
       stopStream();
       return;
     }
-    if (loadingImages) return;
-    if (sendMessage(text, images.map((img) => img.url))) {
+    if (attachments.loading) return;
+    if (sendMessage(text, attachments.urls())) {
       setText("");
-      setImages([]);
+      attachments.clear();
     }
   };
 
@@ -95,29 +63,10 @@ export function Composer({ convoId }: { convoId: string }) {
           const files = imageFilesFrom(e.dataTransfer);
           if (e.dataTransfer.types.includes("Files")) e.preventDefault();
           setDragging(false);
-          void addFiles(files);
+          void attachments.addFiles(files);
         }}
       >
-        {images.length > 0 && (
-          <ul className="attachments" aria-label="Attached images">
-            {images.map((img) => (
-              <li key={img.id} className="attachment">
-                <img src={img.url} alt={img.name} />
-                <button
-                  type="button"
-                  className="attachment-remove"
-                  aria-label={`Remove ${img.name}`}
-                  onClick={() => setImages((prev) => prev.filter((a) => a.id !== img.id))}
-                >
-                  <IconX size={12} />
-                </button>
-                <span className="attachment-name" title={img.name}>
-                  {img.name}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <AttachmentStrip images={attachments.images} onRemove={attachments.remove} />
 
         <div className="composer-row">
           <textarea
@@ -136,7 +85,7 @@ export function Composer({ convoId }: { convoId: string }) {
               const files = imageFilesFrom(e.clipboardData);
               if (files.length === 0) return;
               e.preventDefault();
-              void addFiles(files);
+              void attachments.addFiles(files);
             }}
             onKeyDown={(e) => {
               if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
@@ -152,22 +101,12 @@ export function Composer({ convoId }: { convoId: string }) {
             }}
           />
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept={IMAGE_ACCEPT}
-            multiple
-            hidden
-            onChange={(e) => {
-              void addFiles(Array.from(e.target.files ?? []));
-              e.target.value = "";
-            }}
-          />
+          {attachments.picker}
           <button
             type="button"
             className="attach-btn"
-            onClick={() => fileRef.current?.click()}
-            disabled={active || loadingImages}
+            onClick={attachments.openPicker}
+            disabled={active || attachments.loading}
             aria-label="Attach images"
             title="Attach images"
           >
@@ -178,7 +117,7 @@ export function Composer({ convoId }: { convoId: string }) {
             type="button"
             className={`send-btn ${mode}`}
             onClick={submit}
-            disabled={loadingImages && !active}
+            disabled={attachments.loading && !active}
             aria-label={mode === "stop" ? "Stop generating" : mode === "continue" ? "Continue reply" : "Send"}
           >
             {mode === "stop" ? <IconStop /> : mode === "continue" ? <IconPlay size={16} /> : <IconArrowUp />}

@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
-import { appActions } from "./state/appStore";
+import { appActions, useHydrated } from "./state/appStore";
 import { PANE_SLIDE_MS, useNav } from "./state/nav";
+import { PaneSkeleton, SidebarSkeleton } from "./components/BootSkeleton";
 import { ChatView } from "./components/ChatView";
+import { Lightbox } from "./components/Lightbox";
 import { Sidebar } from "./components/Sidebar";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { SummaryDialog } from "./components/SummaryDialog";
@@ -25,16 +27,24 @@ function EmptyPane() {
 
 export default function App() {
   const { chatOpen, paneConvo, listConvos, listActiveId } = useNav();
+  const hydrated = useHydrated();
 
   return (
     <div
-      className={`app ${chatOpen ? "chat-open" : ""}`}
+      className={`app ${chatOpen ? "chat-open" : ""} ${hydrated ? "ready" : "booting"}`}
       style={{ "--pane-slide": `${PANE_SLIDE_MS}ms` } as CSSProperties}
     >
-      <Sidebar conversations={listConvos} activeId={listActiveId} />
+      {hydrated ? <Sidebar conversations={listConvos} activeId={listActiveId} /> : <SidebarSkeleton />}
       <main className="chatpane">
-        {paneConvo ? <ChatView key={paneConvo.id} convo={paneConvo} /> : <EmptyPane />}
+        {!hydrated ? (
+          <PaneSkeleton />
+        ) : paneConvo ? (
+          <ChatView key={paneConvo.id} convo={paneConvo} />
+        ) : (
+          <EmptyPane />
+        )}
       </main>
+      <Lightbox />
       <SettingsDialog />
       <SummaryDialog />
       <Toast />

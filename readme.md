@@ -6,7 +6,7 @@
 
 ---
 
-Chatternel is a single-page web app that talks straight to OpenRouter's API from your browser. There is no backend, no account system, and no sync server — nothing between you and the model that could log, moderate, or lose your conversations. Your API key and chat history live in your browser's `localStorage` and leave your device only if you export them yourself.
+Chatternel is a single-page web app that talks straight to OpenRouter's API from your browser. There is no backend, no account system, and no sync server — nothing between you and the model that could log, moderate, or lose your conversations. Your API key and chat history live in your browser's own storage and leave your device only if you export them yourself.
 
 Add it to your phone's home screen and it behaves like a native app. Open it on a desktop and it grows into a full two-pane chat client.
 
@@ -35,7 +35,8 @@ Chatternel is the middle path: zero install, zero backend, genuinely good on a p
 Tap the **+** next to the send button to attach a picture — a screenshot, a photo, a diagram, a page of handwriting — and ask about it in the same message.
 
 - **Attach however you like** — pick files with **+**, paste straight from your clipboard, or drag them onto the composer.
-- **Several at once** — send up to 8 images per message; they show as thumbnails you can remove before sending, and stay with the message afterwards.
+- **Several at once** — send up to 8 images per message; they show as thumbnails you can remove before sending, and stay with the message afterwards — tap one to see it full size.
+- **Changed your mind?** — editing one of your messages lets you swap, add or drop its pictures too, then send it again.
 - **Kept light** — big pictures are resized in your browser before they're sent, so requests stay quick and your saved chats stay small.
 - PNG, JPEG, WebP and GIF, sent to OpenRouter exactly the way its API expects. Just make sure the model you've picked can actually see — a text-only model will simply reject the request.
 
@@ -59,7 +60,7 @@ Long conversation eating your context window? Generate an AI summary of it, **re
 Markdown, headings, lists, quotes — and fenced code blocks with **syntax highlighting** in ~35 languages, each with a copy button.
 
 ### 🔒 Private by architecture
-- Everything stored in `localStorage`, on your device, full stop.
+- Everything stored in your browser's own database, on your device, full stop — with room for thousands of messages and plenty of pictures.
 - One-tap **JSON export/import** for backups or moving between devices.
 - No telemetry, no analytics, no cookies, no external requests — even the fonts are bundled.
 - No moderation or rewriting layer: what the model says is what you see.

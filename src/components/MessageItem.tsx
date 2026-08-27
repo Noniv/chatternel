@@ -1,13 +1,16 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { regenerateFrom, resendUserEdit } from "../lib/engine";
 import { stripHiddenBlocks } from "../lib/hiddenBlocks";
+import { imageFilesFrom } from "../lib/images";
 import { appActions, useAppState } from "../state/appStore";
 import { toast } from "../state/toastStore";
+import { uiActions } from "../state/uiStore";
 import type { StreamState } from "../state/streamStore";
 import type { Message } from "../types";
+import { AttachmentStrip, toAttachments, useAttachments } from "./attachments";
 import { CopyButton } from "./CopyButton";
 import { HiddenBlock } from "./HiddenBlock";
-import { IconChevronLeft, IconPencil, IconRedo } from "./Icons";
+import { IconChevronLeft, IconPencil, IconPlus, IconRedo } from "./Icons";
 import { Markdown } from "./Markdown";
 import { ReasoningBlock } from "./ReasoningBlock";
 
@@ -23,16 +26,21 @@ function TypingDots() {
 
 function EditBox({
   initial,
+  initialImages,
+  editableImages,
   saveLabel,
   onSave,
   onCancel,
 }: {
   initial: string;
+  initialImages?: string[];
+  editableImages: boolean;
   saveLabel: string;
-  onSave: (text: string) => void;
+  onSave: (text: string, images: string[]) => void;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState(initial);
+  const attachments = useAttachments(toAttachments(initialImages));
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useLayoutEffect(() => {
@@ -42,8 +50,17 @@ function EditBox({
     el.style.height = el.scrollHeight + "px";
   }, [draft]);
 
+  const canSave = !attachments.loading && (draft.trim().length > 0 || attachments.images.length > 0);
+  const save = () => {
+    if (!canSave) return;
+    onSave(draft.trim(), attachments.urls());
+  };
+
   return (
     <div className="msg-edit">
+      {editableImages && (
+        <AttachmentStrip images={attachments.images} onRemove={attachments.remove} />
+      )}
       <textarea
         ref={ref}
         value={draft}
@@ -51,22 +68,39 @@ function EditBox({
         rows={4}
         autoFocus
         aria-label="Edit message"
+        onPaste={(e) => {
+          if (!editableImages) return;
+          const files = imageFilesFrom(e.clipboardData);
+          if (files.length === 0) return;
+          e.preventDefault();
+          void attachments.addFiles(files);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Escape") onCancel();
           if (e.key === "Enter" && e.ctrlKey) {
             e.preventDefault();
-            if (draft.trim()) onSave(draft.trim());
+            save();
           }
         }}
       />
       <div className="msg-edit-actions">
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          onClick={() => draft.trim() && onSave(draft.trim())}
-        >
+        <button type="button" className="btn btn-primary btn-sm" disabled={!canSave} onClick={save}>
           {saveLabel}
         </button>
+        {editableImages && (
+          <>
+            {attachments.picker}
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={attachments.openPicker}
+              disabled={attachments.loading}
+            >
+              <IconPlus size={14} />
+              Add image
+            </button>
+          </>
+        )}
         <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
           Cancel
         </button>
@@ -101,10 +135,10 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
   );
   const content = stripped ? stripped.content : rawContent;
 
-  const saveEdit = (text: string) => {
+  const saveEdit = (text: string, images: string[]) => {
     setEditing(false);
     if (isUser) {
-      resendUserEdit(index, text);
+      resendUserEdit(index, text, images);
     } else {
       appActions.saveAssistantEdit(convoId, index, text);
       toast("Response edited ✦");
@@ -170,6 +204,8 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
       {editing ? (
         <EditBox
           initial={msg.content}
+          initialImages={msg.images}
+          editableImages={isUser}
           saveLabel={isUser ? "Send" : "Save"}
           onSave={saveEdit}
           onCancel={() => setEditing(false)}
@@ -189,9 +225,14 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
           {msg.images && msg.images.length > 0 && (
             <div className="msg-images">
               {msg.images.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer" aria-label={`Open image ${i + 1}`}>
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`View image ${i + 1} full size`}
+                  onClick={() => uiActions.openLightbox(msg.images!, i)}
+                >
                   <img src={url} alt={`Attached image ${i + 1}`} loading="lazy" />
-                </a>
+                </button>
               ))}
             </div>
           )}

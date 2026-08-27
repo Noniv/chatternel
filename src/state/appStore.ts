@@ -1,18 +1,46 @@
 import { useSyncExternalStore } from "react";
-import { loadStore, persistStore, uuid } from "../lib/storage";
-import { TITLE_LENGTH, type Conversation, type Message, type Settings, type StoreData } from "../types";
+import { loadAll, writeChanges } from "../lib/db";
+import { uuid } from "../lib/storage";
+import { toast } from "./toastStore";
+import {
+  DEFAULT_SETTINGS,
+  TITLE_LENGTH,
+  type Conversation,
+  type Message,
+  type Settings,
+  type StoreData,
+} from "../types";
 
-let state: StoreData = loadStore();
+let state: StoreData = { settings: { ...DEFAULT_SETTINGS }, conversations: [], currentId: null };
+/** False until the database has been read, and permanently false if reading failed. */
+let persisting = false;
+let hydrated = false;
+let writeWarned = false;
+
 const listeners = new Set<() => void>();
 
 function emit(): void {
   for (const listener of listeners) listener();
 }
 
+async function persist(next: StoreData, prev: StoreData): Promise<void> {
+  try {
+    await writeChanges(next, prev);
+    writeWarned = false;
+  } catch {
+    if (writeWarned) return;
+    writeWarned = true;
+    toast("Couldn't save that change — your browser refused the write. Export a backup to be safe.");
+  }
+}
+
 function set(next: StoreData): void {
+  const prev = state;
   state = next;
-  persistStore(state);
   emit();
+  // Writing before hydration would overwrite stored data with the empty
+  // starting state; writing after a failed load would do the same.
+  if (persisting) void persist(next, prev);
 }
 
 function subscribe(listener: () => void): () => void {
@@ -27,6 +55,35 @@ export function getAppState(): StoreData {
 export function useAppState(): StoreData {
   return useSyncExternalStore(subscribe, getAppState);
 }
+
+/** True once the stored data has been read and the UI can be shown. */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(subscribe, () => hydrated);
+}
+
+let hydration: Promise<void> | null = null;
+
+export function hydrate(): Promise<void> {
+  if (!hydration) hydration = run();
+  return hydration;
+}
+
+async function run(): Promise<void> {
+  try {
+    const data = await loadAll();
+    state = { settings: data.settings, conversations: data.conversations, currentId: null };
+    persisting = true;
+  } catch {
+    // Reading failed, so we have no idea what is stored: never write, or we
+    // would replace real conversations with this empty session.
+    toast("Couldn't open local storage — this session won't be saved.");
+  }
+  hydrated = true;
+  emit();
+}
+
+// Starts as soon as the app is imported, before React renders anything.
+void hydrate();
 
 export function getCurrentConvo(): Conversation | null {
   return state.conversations.find((c) => c.id === state.currentId) ?? null;
@@ -123,12 +180,20 @@ export const appActions = {
     }));
   },
 
-  saveUserEdit(convoId: string, index: number, content: string): void {
-    updateConvo(convoId, (c) => ({
-      ...c,
-      messages: [...c.messages.slice(0, index), { ...c.messages[index], content }],
-      updatedAt: Date.now(),
-    }));
+  saveUserEdit(convoId: string, index: number, content: string, images?: string[]): void {
+    updateConvo(convoId, (c) => {
+      const msg: Message = { ...c.messages[index], content };
+      // `images` omitted means "leave the attachments alone"; an empty array clears them.
+      if (images) {
+        if (images.length) msg.images = images;
+        else delete msg.images;
+      }
+      return {
+        ...c,
+        messages: [...c.messages.slice(0, index), msg],
+        updatedAt: Date.now(),
+      };
+    });
   },
 
   saveAssistantEdit(convoId: string, index: number, content: string): void {

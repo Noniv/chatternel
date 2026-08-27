@@ -202,6 +202,112 @@
   height: 100%;
 }
 
+/* ================= boot / hydration ================= */
+
+/*
+ * The skeleton only starts fading in after .14s. A database read that finishes
+ * before then is over while it is still fully transparent, so the usual case is
+ * no visible loading state at all — and a slow one arrives as a fade, not a flash.
+ */
+.boot {
+  animation: boot-fade 280ms ease 140ms both;
+}
+
+@keyframes boot-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Real content takes over with a matching fade the moment the read lands. */
+.app.ready .sidebar,
+.app.ready .chatpane {
+  animation: boot-fade 260ms ease both;
+}
+
+.boot-dim {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.boot-list {
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.boot-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px 12px;
+}
+
+.skel {
+  border-radius: var(--r-sm);
+  background: linear-gradient(100deg, var(--bg-2) 34%, var(--bg-3) 50%, var(--bg-2) 66%);
+  background-size: 220% 100%;
+  animation: skel-shimmer 1.5s linear infinite;
+}
+
+.skel-btn {
+  height: 38px;
+  border-radius: var(--r-sm);
+}
+
+.skel-line {
+  height: 9px;
+  width: 55%;
+}
+
+.skel-line.wide {
+  height: 11px;
+  width: 78%;
+}
+
+@keyframes skel-shimmer {
+  from {
+    background-position: 220% 0;
+  }
+  to {
+    background-position: -220% 0;
+  }
+}
+
+.boot-glyph {
+  animation: boot-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes boot-pulse {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.03);
+  }
+}
+
+.boot-note {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    background: var(--bg-2);
+  }
+
+  .boot-glyph {
+    opacity: 0.4;
+  }
+}
+
 /* ================= chat ================= */
 
 .chat {
@@ -790,8 +896,18 @@
   outline: none;
 }
 
+.msg-edit .attachments {
+  margin: 0;
+  padding: 0;
+}
+
+.msg.user .msg-edit .attachments {
+  justify-content: flex-end;
+}
+
 .msg-edit-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1013,17 +1129,24 @@
   justify-content: flex-end;
 }
 
-.msg-images a {
+.msg-images button {
   display: block;
   line-height: 0;
   border-radius: var(--r-sm);
   overflow: hidden;
   border: 1px solid var(--line-1);
-  transition: border-color 0.15s;
+  transition:
+    border-color 0.15s,
+    transform 0.12s;
+  cursor: zoom-in;
 }
 
-.msg-images a:hover {
+.msg-images button:hover {
   border-color: var(--accent-line);
+}
+
+.msg-images button:active {
+  transform: scale(0.985);
 }
 
 .msg-images img {
@@ -1076,6 +1199,130 @@
 .scroll-btn:hover {
   background: var(--bg-2);
   color: var(--accent-hi);
+}
+
+/* ================= image viewer ================= */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, var(--safe-bottom)) 20px;
+  background: rgba(4, 4, 8, 0.86);
+  backdrop-filter: blur(6px);
+  animation: lightbox-in 0.18s ease both;
+  cursor: zoom-out;
+}
+
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lightbox-img {
+  max-width: min(100%, 1400px);
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--r-md);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  cursor: default;
+  animation: lightbox-img-in 0.22s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes lightbox-img-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  color: var(--ink-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+}
+
+.lightbox-step {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  color: var(--ink-1);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    opacity 0.15s;
+}
+
+.lightbox-step:hover:not(:disabled) {
+  background: var(--bg-3);
+  color: var(--ink-0);
+}
+
+.lightbox-step:disabled {
+  opacity: 0.25;
+}
+
+.lightbox-step.prev {
+  left: 16px;
+}
+
+.lightbox-step.next {
+  right: 16px;
+}
+
+.lightbox-step.next svg {
+  transform: rotate(180deg);
+}
+
+.lightbox-count {
+  position: absolute;
+  bottom: max(18px, var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12.5px;
+  color: var(--ink-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+@media (max-width: 640px) {
+  .lightbox-step {
+    width: 38px;
+    height: 38px;
+  }
+
+  .lightbox-step.prev {
+    left: 8px;
+  }
+
+  .lightbox-step.next {
+    right: 8px;
+  }
 }
 
 /* ================= modals ================= */

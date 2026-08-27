@@ -87,9 +87,9 @@ export function regenerateFrom(index: number): void {
   void generate(index);
 }
 
-export function resendUserEdit(index: number, content: string): void {
+export function resendUserEdit(index: number, content: string, images?: string[]): void {
   const convo = getCurrentConvo();
   if (!convo || streamStore.get().active) return;
-  appActions.saveUserEdit(convo.id, index, content);
+  appActions.saveUserEdit(convo.id, index, content, images);
   void generate(null);
 }
