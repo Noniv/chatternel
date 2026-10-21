@@ -216,7 +216,7 @@ export function ChatView({ convo }: { convo: Conversation }) {
         >
           <IconArrowDown size={17} />
         </button>
-        <Composer convoId={convo.id} />
+        <Composer convoId={convo.id} convoHasImages={convo.messages.some((m) => !!m.images?.length)} />
       </div>
     </div>
   );

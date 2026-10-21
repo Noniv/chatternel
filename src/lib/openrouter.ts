@@ -16,20 +16,37 @@ type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_u
 /**
  * Messages without images stay plain strings. With images we switch to the
  * multimodal content array OpenRouter documents: the text part first, then one
- * `image_url` part per image.
+ * `image_url` part per image. For models that can't take images, the images are
+ * replaced by a short note so the model knows something was shared.
  */
-function messageContent(msg: Message): string | ContentPart[] {
+function messageContent(msg: Message, withImages: boolean): string | ContentPart[] {
   if (!msg.images || msg.images.length === 0) return msg.content;
+  if (!withImages) {
+    const n = msg.images.length;
+    const note = `[${n === 1 ? "An image was" : `${n} images were`} attached here but omitted — the current model can't view images.]`;
+    return msg.content ? `${msg.content}
+
+${note}` : note;
+  }
   const parts: ContentPart[] = [];
   if (msg.content) parts.push({ type: "text", text: msg.content });
   for (const url of msg.images) parts.push({ type: "image_url", image_url: { url } });
   return parts;
 }
 
-export function buildRequestBody(settings: Settings, convo: Conversation, endIdx: number): Record<string, unknown> {
+export function historyHasImages(convo: Conversation, endIdx: number): boolean {
+  return convo.messages.slice(0, endIdx).some((msg) => !!msg.images?.length);
+}
+
+export function buildRequestBody(
+  settings: Settings,
+  convo: Conversation,
+  endIdx: number,
+  withImages = true,
+): Record<string, unknown> {
   const history = convo.messages
     .slice(0, endIdx)
-    .map((msg) => ({ role: msg.role, content: messageContent(msg) }));
+    .map((msg) => ({ role: msg.role, content: messageContent(msg, withImages) }));
 
   let systemContent = settings.systemPrompt || "";
   if (convo.summary) {
@@ -158,6 +175,8 @@ export interface ChatStreamResult {
   reasoning: string;
   errored: boolean;
   errorMessage?: string;
+  /** HTTP status when the request itself was rejected. */
+  status?: number;
 }
 
 async function readSse(
@@ -189,6 +208,7 @@ export async function runChatStream(opts: {
   const parser = new ThinkTagParser();
   let errored = false;
   let errorMessage: string | undefined;
+  let status: number | undefined;
 
   const emit = () =>
     opts.onUpdate({
@@ -204,7 +224,10 @@ export async function runChatStream(opts: {
       body: JSON.stringify(opts.body),
       signal: opts.signal,
     });
-    if (!response.ok) throw new Error(await extractError(response));
+    if (!response.ok) {
+      status = response.status;
+      throw new Error(await extractError(response));
+    }
 
     await readSse(response, (delta) => {
       if (delta.reasoning) parser.reasoning += delta.reasoning;
@@ -220,7 +243,7 @@ export async function runChatStream(opts: {
     }
   }
 
-  return { content: parser.content, reasoning: parser.reasoning, errored, errorMessage };
+  return { content: parser.content, reasoning: parser.reasoning, errored, errorMessage, status };
 }
 
 export async function runPlainStream(opts: {

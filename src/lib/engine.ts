@@ -2,12 +2,19 @@ import { appActions, getAppState, getCurrentConvo } from "../state/appStore";
 import { streamStore } from "../state/streamStore";
 import { toast } from "../state/toastStore";
 import { uiActions } from "../state/uiStore";
-import { buildRequestBody, runChatStream } from "./openrouter";
+import { DEFAULT_SETTINGS } from "../types";
+import { markNoVision, supportsImages } from "./models";
+import { buildRequestBody, historyHasImages, runChatStream } from "./openrouter";
 
 let controller: AbortController | null = null;
 
 export function stopStream(): void {
   controller?.abort();
+}
+
+/** A 4xx that isn't about auth, credits or rate limits — what an unsupported image input looks like. */
+function mayBeImageRejection(status?: number): boolean {
+  return !!status && status >= 400 && status < 500 && ![401, 402, 403, 429].includes(status);
 }
 
 export function sendMessage(text: string, images: string[] = []): boolean {
@@ -53,6 +60,7 @@ export async function generate(targetIndex: number | null): Promise<void> {
 
   streamStore.start(convo.id, index);
   controller = new AbortController();
+  const { signal } = controller;
 
   const fresh = getAppState().conversations.find((c) => c.id === convo.id);
   if (!fresh) {
@@ -60,14 +68,30 @@ export async function generate(targetIndex: number | null): Promise<void> {
     controller = null;
     return;
   }
-  const body = buildRequestBody(settings, fresh, index);
+  const modelId = settings.modelId || DEFAULT_SETTINGS.modelId;
+  let withImages = historyHasImages(fresh, index) && supportsImages(modelId) !== false;
 
-  const result = await runChatStream({
-    apiKey: settings.apiKey,
-    body,
-    signal: controller.signal,
-    onUpdate: (update) => streamStore.push(update),
-  });
+  const run = () =>
+    runChatStream({
+      apiKey: settings.apiKey,
+      body: buildRequestBody(settings, fresh, index, withImages),
+      signal,
+      onUpdate: (update) => streamStore.push(update),
+    });
+
+  let result = await run();
+
+  // Models missing from the catalog (or a pinned provider without vision) only
+  // tell us by rejecting the request — retry once with the images left out.
+  if (withImages && result.errored && !result.content && mayBeImageRejection(result.status)) {
+    withImages = false;
+    const retry = await run();
+    if (!retry.errored && !signal.aborted) {
+      markNoVision(modelId);
+      toast("This model can't view images — sent the chat without them.");
+    }
+    if (!retry.errored || retry.content) result = retry;
+  }
 
   controller = null;
 

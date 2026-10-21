@@ -2,11 +2,12 @@ import { memo, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { regenerateFrom, resendUserEdit } from "../lib/engine";
 import { stripHiddenBlocks } from "../lib/hiddenBlocks";
 import { imageFilesFrom } from "../lib/images";
+import { useSupportsImages } from "../lib/models";
 import { appActions, useAppState } from "../state/appStore";
 import { toast } from "../state/toastStore";
 import { uiActions } from "../state/uiStore";
 import type { StreamState } from "../state/streamStore";
-import type { Message } from "../types";
+import { DEFAULT_SETTINGS, type Message } from "../types";
 import { AttachmentStrip, toAttachments, useAttachments } from "./attachments";
 import { CopyButton } from "./CopyButton";
 import { HiddenBlock } from "./HiddenBlock";
@@ -118,7 +119,8 @@ interface Props {
 
 export const MessageItem = memo(function MessageItem({ msg, index, convoId, live }: Props) {
   const [editing, setEditing] = useState(false);
-  const { hiddenBlocks } = useAppState().settings;
+  const { hiddenBlocks, modelId } = useAppState().settings;
+  const imagesSent = useSupportsImages(modelId || DEFAULT_SETTINGS.modelId) !== false;
 
   const streaming = live !== null;
   const rawContent = streaming ? live.content : msg.content;
@@ -223,7 +225,10 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
             <HiddenBlock key={i} label={section.label} text={section.text} />
           ))}
           {msg.images && msg.images.length > 0 && (
-            <div className="msg-images">
+            <div
+              className={`msg-images${imagesSent ? "" : " not-sent"}`}
+              title={imagesSent ? undefined : "Not sent — the current model can't view images"}
+            >
               {msg.images.map((url, i) => (
                 <button
                   key={i}
@@ -234,6 +239,7 @@ export const MessageItem = memo(function MessageItem({ msg, index, convoId, live
                   <img src={url} alt={`Attached image ${i + 1}`} loading="lazy" />
                 </button>
               ))}
+              {!imagesSent && <span className="msg-images-badge">Not sent to this model</span>}
             </div>
           )}
           {(content || !msg.images?.length) && (

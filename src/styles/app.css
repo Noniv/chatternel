@@ -1157,6 +1157,41 @@
   background: var(--bg-2);
 }
 
+.msg-images.not-sent {
+  position: relative;
+}
+
+.msg-images.not-sent img {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+}
+
+.msg-images-badge {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.msg.user .msg-images-badge {
+  text-align: right;
+}
+
+.vision-notice {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-1);
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-md);
+  padding: 7px 12px;
+  margin-bottom: 8px;
+}
+
+.vision-notice strong {
+  color: var(--ink-0);
+  font-weight: 600;
+}
+
 .composer-hint {
   font-size: 11px;
   color: var(--ink-2);

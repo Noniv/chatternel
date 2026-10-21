@@ -1,8 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { sendMessage, stopStream } from "../lib/engine";
 import { imageFilesFrom } from "../lib/images";
+import { useSupportsImages } from "../lib/models";
+import { useAppState } from "../state/appStore";
 import { useStreamActive } from "../state/streamStore";
 import { AttachmentStrip, useAttachments } from "./attachments";
+import { DEFAULT_SETTINGS } from "../types";
 import { IconArrowUp, IconPlay, IconPlus, IconStop } from "./Icons";
 
 const MAX_INPUT_HEIGHT = 160;
@@ -11,12 +14,15 @@ function hasFinePointer() {
   return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
-export function Composer({ convoId }: { convoId: string }) {
+export function Composer({ convoId, convoHasImages }: { convoId: string; convoHasImages: boolean }) {
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
   const attachments = useAttachments();
   const active = useStreamActive();
   const ref = useRef<HTMLTextAreaElement>(null);
+  const modelId = useAppState().settings.modelId || DEFAULT_SETTINGS.modelId;
+  const vision = useSupportsImages(modelId);
+  const showVisionNotice = vision === false && (convoHasImages || attachments.images.length > 0);
 
   const { clear } = attachments;
   useEffect(() => {
@@ -48,6 +54,12 @@ export function Composer({ convoId }: { convoId: string }) {
 
   return (
     <div className="composer">
+      {showVisionNotice && (
+        <p className="vision-notice" role="status">
+          <strong>{modelId.split("/").pop()}</strong> can't view images, so they're left out of what's
+          sent. Switch to a vision model to include them.
+        </p>
+      )}
       <div
         className={`composer-card${dragging ? " dropping" : ""}`}
         onDragOver={(e) => {
